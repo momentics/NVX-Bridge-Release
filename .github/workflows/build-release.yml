@@ -335,3 +335,23 @@ jobs:
             artifacts/NVX-Bridge-darwin-amd64/dist/NVX-Bridge-darwin-amd64.tar.gz.sha256
             artifacts/NVX-Bridge-windows-amd64/dist/NVX-Bridge-windows-amd64.zip
             artifacts/NVX-Bridge-windows-amd64/dist/NVX-Bridge-windows-amd64.zip.sha256
+
+      - name: Remove automatic release attestation asset
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag='${{ steps.meta.outputs.tag }}'
+          release_json="$(gh api "repos/${{ github.repository }}/releases/tags/${tag}")"
+          release_id="$(printf '%s' "$release_json" | jq -r '.id')"
+          if [[ -z "$release_id" || "$release_id" == "null" ]]; then
+            echo "Release not found, skipping attestation cleanup"
+            exit 0
+          fi
+          gh api "repos/${{ github.repository }}/releases/${release_id}/assets" --jq '.[] | select(.name | test("(?i)attestation")) | .id' | while read -r asset_id; do
+            if [[ -n "$asset_id" ]]; then
+              echo "Deleting attestation asset $asset_id"
+              gh api --method DELETE "repos/${{ github.repository }}/releases/assets/${asset_id}"
+            fi
+          done
