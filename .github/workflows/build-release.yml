@@ -86,7 +86,6 @@ jobs:
         env:
           PKG_NAME: NVX-Bridge-linux-amd64
           ARCHIVE_NAME: NVX-Bridge-linux-amd64.tar.gz
-          ARCHIVE_FORMAT: tar.gz
         run: |
           set -euo pipefail
           pkg_root="release/${PKG_NAME}"
@@ -100,19 +99,8 @@ jobs:
           cp -R licenses "$pkg_root/"
           sha="$(cat GIT_SHA.txt)"
           printf 'NVX-Bridge commit: %s\n' "$sha" > "$pkg_root/REVISION.txt"
-          python_bin="$(command -v python3 || true)"
-          if [[ -z "$python_bin" ]]; then
-            python_bin="$(command -v python || true)"
-          fi
-          if [[ -z "$python_bin" ]]; then
-            echo "Python interpreter not found" >&2
-            exit 1
-          fi
-          "$python_bin" tools/make_archive.py \
-            --input-dir "$pkg_root" \
-            --output "${archive_dir}/${ARCHIVE_NAME}" \
-            --format "$ARCHIVE_FORMAT" \
-            --sha256 "${archive_dir}/${ARCHIVE_NAME}.sha256"
+          tar -czf "${archive_dir}/${ARCHIVE_NAME}" -C release "${PKG_NAME}"
+          sha256sum "${archive_dir}/${ARCHIVE_NAME}" > "${archive_dir}/${ARCHIVE_NAME}.sha256"
 
       - name: Upload artifact (Linux)
         uses: actions/upload-artifact@v4
@@ -174,7 +162,6 @@ jobs:
         env:
           PKG_NAME: NVX-Bridge-darwin-amd64
           ARCHIVE_NAME: NVX-Bridge-darwin-amd64.tar.gz
-          ARCHIVE_FORMAT: tar.gz
         run: |
           set -euo pipefail
           pkg_root="release/${PKG_NAME}"
@@ -188,19 +175,8 @@ jobs:
           cp -R licenses "$pkg_root/"
           sha="$(cat GIT_SHA.txt)"
           printf 'NVX-Bridge commit: %s\n' "$sha" > "$pkg_root/REVISION.txt"
-          python_bin="$(command -v python3 || true)"
-          if [[ -z "$python_bin" ]]; then
-            python_bin="$(command -v python || true)"
-          fi
-          if [[ -z "$python_bin" ]]; then
-            echo "Python interpreter not found" >&2
-            exit 1
-          fi
-          "$python_bin" tools/make_archive.py \
-            --input-dir "$pkg_root" \
-            --output "${archive_dir}/${ARCHIVE_NAME}" \
-            --format "$ARCHIVE_FORMAT" \
-            --sha256 "${archive_dir}/${ARCHIVE_NAME}.sha256"
+          tar -czf "${archive_dir}/${ARCHIVE_NAME}" -C release "${PKG_NAME}"
+          shasum -a 256 "${archive_dir}/${ARCHIVE_NAME}" > "${archive_dir}/${ARCHIVE_NAME}.sha256"
 
       - name: Upload artifact (macOS)
         uses: actions/upload-artifact@v4
@@ -257,36 +233,28 @@ jobs:
           go build -v -trimpath -ldflags "-s -w -H=windowsgui" -o dist/NVX-Bridge-windows-amd64.exe $APP_CMD
 
       - name: Stage package (Windows)
-        shell: bash
+        shell: pwsh
         env:
           PKG_NAME: NVX-Bridge-windows-amd64
           ARCHIVE_NAME: NVX-Bridge-windows-amd64.zip
-          ARCHIVE_FORMAT: zip
         run: |
-          set -euo pipefail
-          pkg_root="release/${PKG_NAME}"
-          archive_dir="dist"
-          rm -rf "$pkg_root"
-          mkdir -p "$pkg_root" "$archive_dir"
-          cp "app/dist/${PKG_NAME}.exe" "$pkg_root/${PKG_NAME}.exe"
-          cp LICENSE NOTICE "$pkg_root/"
-          rm -rf "$pkg_root/licenses"
-          cp -R licenses "$pkg_root/"
-          sha="$(cat GIT_SHA.txt)"
-          printf 'NVX-Bridge commit: %s\n' "$sha" > "$pkg_root/REVISION.txt"
-          python_bin="$(command -v python3 || true)"
-          if [[ -z "$python_bin" ]]; then
-            python_bin="$(command -v python || true)"
-          fi
-          if [[ -z "$python_bin" ]]; then
-            echo "Python interpreter not found" >&2
-            exit 1
-          fi
-          "$python_bin" tools/make_archive.py \
-            --input-dir "$pkg_root" \
-            --output "${archive_dir}/${ARCHIVE_NAME}" \
-            --format "$ARCHIVE_FORMAT" \
-            --sha256 "${archive_dir}/${ARCHIVE_NAME}.sha256"
+          $pkgRoot = Join-Path release $env:PKG_NAME
+          $archiveDir = "dist"
+          Remove-Item $pkgRoot -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $pkgRoot | Out-Null
+          $archiveDirObj = New-Item -ItemType Directory -Force -Path $archiveDir
+          Copy-Item "app/dist/$($env:PKG_NAME).exe" -Destination "$pkgRoot/$($env:PKG_NAME).exe"
+          Copy-Item -Path LICENSE, NOTICE -Destination $pkgRoot
+          Remove-Item "$pkgRoot/licenses" -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item -Path licenses -Destination $pkgRoot -Recurse
+          $sha = (Get-Content GIT_SHA.txt -Raw).Trim()
+          "NVX-Bridge commit: $sha" | Set-Content "$pkgRoot/REVISION.txt"
+          $archivePath = Join-Path $archiveDirObj.FullName $env:ARCHIVE_NAME
+          Push-Location release
+          Compress-Archive -Path $env:PKG_NAME -DestinationPath $archivePath -Force
+          Pop-Location
+          $hash = Get-FileHash -Algorithm SHA256 $archivePath
+          "$($hash.Hash.ToLower())  $($env:ARCHIVE_NAME)" | Set-Content "$archivePath.sha256"
 
       - name: Upload artifact (Windows)
         uses: actions/upload-artifact@v4
