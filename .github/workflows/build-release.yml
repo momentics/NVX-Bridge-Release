@@ -98,6 +98,8 @@ jobs:
           cp LICENSE NOTICE "$pkg_root/"
           rm -rf "$pkg_root/licenses"
           cp -R licenses "$pkg_root/"
+          rm -rf "$pkg_root/manual"
+          cp -R manual "$pkg_root/"
           sha="$(cat GIT_SHA.txt)"
           printf 'NVX-Bridge commit: %s\n' "$sha" > "$pkg_root/REVISION.txt"
           tar -czf "${archive_dir}/${ARCHIVE_NAME}" -C release "${PKG_NAME}"
@@ -175,6 +177,8 @@ jobs:
           cp LICENSE NOTICE "$pkg_root/"
           rm -rf "$pkg_root/licenses"
           cp -R licenses "$pkg_root/"
+          rm -rf "$pkg_root/manual"
+          cp -R manual "$pkg_root/"
           sha="$(cat GIT_SHA.txt)"
           printf 'NVX-Bridge commit: %s\n' "$sha" > "$pkg_root/REVISION.txt"
           tar -czf "${archive_dir}/${ARCHIVE_NAME}" -C release "${PKG_NAME}"
@@ -250,6 +254,8 @@ jobs:
           Copy-Item -Path LICENSE, NOTICE -Destination $pkgRoot
           Remove-Item "$pkgRoot/licenses" -Recurse -Force -ErrorAction SilentlyContinue
           Copy-Item -Path licenses -Destination $pkgRoot -Recurse
+          Remove-Item "$pkgRoot/manual" -Recurse -Force -ErrorAction SilentlyContinue
+          Copy-Item -Path manual -Destination $pkgRoot -Recurse
           $sha = (Get-Content GIT_SHA.txt -Raw).Trim()
           "NVX-Bridge commit: $sha" | Set-Content "$pkgRoot/REVISION.txt"
           $archivePath = Join-Path $archiveDirObj.FullName $env:ARCHIVE_NAME
