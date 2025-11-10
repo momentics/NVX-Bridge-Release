@@ -331,7 +331,6 @@ jobs:
             release-assets/NVX-Bridge-windows-amd64.zip \
             release-assets/NVX-Bridge-windows-amd64.zip.sha256 \
             --title "$title" \
-            --generate-notes \
             --latest
 
       - name: Remove automatic release attestation asset
