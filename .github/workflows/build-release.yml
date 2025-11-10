@@ -323,6 +323,7 @@ jobs:
           tag='${{ steps.meta.outputs.tag }}'
           title='${{ steps.meta.outputs.name }}'
           gh release create "$tag" \
+            --repo "${GITHUB_REPOSITORY}" \
             release-assets/NVX-Bridge-linux-amd64.tar.gz \
             release-assets/NVX-Bridge-linux-amd64.tar.gz.sha256 \
             release-assets/NVX-Bridge-darwin-amd64.tar.gz \
@@ -334,7 +335,7 @@ jobs:
             --latest
 
       - name: Remove automatic release attestation asset
-        if: always()
+        if: ${{ success() }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
